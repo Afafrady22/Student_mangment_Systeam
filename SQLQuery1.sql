@@ -259,7 +259,162 @@ CLOSE LowAttendanceCursor;
 DEALLOCATE LowAttendanceCursor;
 
 
+-------------------------------------------Nda-----------------------------------------------------------
+--#1
+---Creation of all Stored Procedure
+--A Stored procedure that adds a new student to the Student table
 
+create or alter Procedure sp_AddNewStd
+
+		@First_Name varchar(20),
+		@Last_Name varchar(20),
+		@Email varchar(20),
+		@PhoneNum varchar(20),
+		@Address varchar(20),
+		@GPA decimal,
+		@DepartmentID int,
+		@NewStd_Id int output
+
+as 
+begin 
+		begin try
+		insert into Student
+		(FirstName,LastName,Email,PhoneNum,Address,GPA,DepartmentID)
+		values (@First_Name, @Last_Name,@Email, @PhoneNum, @Address,@GPA,@DepartmentID)
+		
+		set @NewStd_Id = SCOPE_IDENTITY();
+		end try 
+
+		begin catch 
+		print ('Failed to add new Student due to duplicity!!')
+		end catch 
+end;
+
+
+
+exec sp_AddNewStd 'Nda','Youssef','ndayou99@gmail.com',123456789,'Aswan', 3.4,1,1
+
+
+--------------------------------------------
+---#2
+--- create Stored Procedure to Enroll Student in speceific Course
+create or alter procedure sp_EnrollStudentInCourse
+		@StudentId int,
+		@CourseId int
+as 
+begin 
+
+	begin try
+		insert into StudentCourse(StudentID,CourseID)
+		values (@StudentId,@CourseId);	
+	end try
+
+	begin catch
+		if exists 
+		(
+		select 1 from StudentCourse sc
+		where sc.StudentID = @StudentId and sc.CourseID = @CourseId
+		)
+		print ('Student already enrolled this Course !!')
+
+	end catch
+end;
+
+exec sp_EnrollStudentInCourse 1,1;
+
+--------------------------------------------
+
+--#3
+---- Stored Procedure to update Student Fees
+
+create or alter Proc sp_UpdateStudentFees
+		@StudentId int,
+		@Amount decimal(10,2)
+as
+begin 
+		
+		update Fees
+		set IsPaid = 1,
+		PaymentDate = GETDATE(),
+		Amount = @Amount
+		where StudentID = @StudentId
+
+		if @@ROWCOUNT = 0 
+		throw 50001, 'Student fees record or Student Id not found !!',1;
+
+end;
+
+exec sp_UpdateStudentFees 1, 2000.00
+exec sp_UpdateStudentFees 5,500.2
+
+--------------------------------------------
+
+--#4
+----- Stored Procedure to Send Notification to Student
+
+create or alter Proc sp_SendStudentNotification
+	@StudentId int, 
+	@Message varchar(255)
+as
+begin 
+	begin try 
+	 if not exists (select 1 from Student where StudentID = @StudentId)
+        begin
+            print 'Student not found, notification not sent';
+            return;
+        end
+
+	insert into Notification (StudentID,Message)
+	values (@StudentId, @Message)
+
+	 print 'Notification sent successfully';
+	end try 
+
+	begin catch 
+	 print 'Error sending notification';
+	end catch 
+end;
+	
+
+exec sp_SendStudentNotification 5 ,'You have delayed fees, Deadline next Sunday'
+
+
+--------------------------------------------
+
+--#5
+---- Stored Procedure to calculates a student GPA based on course grades
+
+create or alter proc sp_GPABasedOnGrades
+	@StudentId int
+as 
+begin 
+		begin try 
+		declare @gpa decimal(3,2);
+
+		select @gpa = avg(Grade)
+        from StudentCourse
+        where StudentID = @StudentId;
+
+		
+		if @gpa is null
+		begin 
+		print 'No GPA calculated: student has no grades';
+		return;
+		end 
+
+		update Student
+		set GPA = @gpa
+		where StudentID = @StudentId
+		
+		end try 
+
+		begin catch 
+		print('Erorr calculate GPA or Student has no records!!')
+		end catch
+end;
+
+
+EXEC sp_GPABasedOnGrades 5;
 
 
 
