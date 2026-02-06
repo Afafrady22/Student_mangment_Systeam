@@ -106,4 +106,162 @@ RETURN (
     WHERE StudentId = @StuID
 
 );
-SELECT * FROM dbo. GetStudentNotificationsLog (2);
+
+
+SELECT * FROM dbo.GetStudentNotificationsLog (2);
+
+
+
+-------------------------------------------------Manar----------------------------------------------------------------
+
+
+use [db_ac4726_studentmanagement]
+
+
+select *
+from Student
+
+-- View1: Identifies students at academic risk based on GPA and attendance
+CREATE OR ALTER VIEW vw_StudentAttendGpaRisk
+AS
+SELECT 
+    s.StudentID, s.FullName, s.GPA, sc.Attendance
+FROM Student s
+JOIN StudentCourse sc ON s.StudentID = sc.StudentID
+WHERE s.GPA < 2.0
+   OR sc.Attendance < 60;
+
+
+   SELECT *
+FROM vw_StudentAttendGpaRisk;
+
+
+-- View2: Lists students with no chatbot interaction
+
+CREATE OR ALTER VIEW vw_InactiveStudents
+AS
+SELECT 
+    s.StudentID,
+    s.FullName
+FROM Student s
+LEFT JOIN Chatbot c ON s.StudentID = c.StudentID
+WHERE c.ChatID IS NULL;
+
+
+SELECT *
+FROM vw_InactiveStudents;
+
+
+-- View3: Displays unpaid students count per department
+
+
+CREATE OR ALTER VIEW vw_DepartmentUnpaidStudents
+AS
+SELECT 
+    d.Name AS DepartmentName,
+    COUNT(f.FeesID) AS UnpaidStudents
+FROM Department d
+JOIN Student s ON d.DepartmentID = s.DepartmentID
+JOIN Fees f ON s.StudentID = f.StudentID
+WHERE f.IsPaid = 0
+GROUP BY d.Name;
+
+SELECT *
+FROM vw_DepartmentUnpaidStudents;
+
+
+-- View4: Shows courses with no enrolled students
+
+CREATE OR ALTER VIEW vw_CoursesWithoutStudents
+AS
+SELECT 
+    c.CourseID,
+    c.Name AS CourseName
+FROM Course c
+LEFT JOIN StudentCourse sc ON c.CourseID = sc.CourseID
+WHERE sc.StudentID IS NULL;
+
+
+SELECT *
+FROM vw_CoursesWithoutStudents;
+
+
+-- View5: Identifies students with many unread notifications
+
+CREATE OR ALTER VIEW vw_UnReadNotification
+AS
+SELECT 
+    s.FullName,
+    COUNT(n.NotifID) AS UnreadNotifications
+FROM Student s
+JOIN Notification n ON s.StudentID = n.StudentID
+WHERE n.IsRead = 0
+GROUP BY s.FullName
+HAVING COUNT(n.NotifID) >= 5;
+
+SELECT *
+FROM vw_UnReadNotification;
+
+-------------------------------------------Cursor-----------------------------------------------------
+
+
+-- Cursor1: Marks all unread notifications as read
+
+
+DECLARE ReadNotificationsCursor CURSOR
+FOR
+SELECT NotifID
+FROM Notification
+WHERE IsRead = 0;
+
+DECLARE @NotifID INT;
+
+OPEN ReadNotificationsCursor;
+FETCH NEXT FROM ReadNotificationsCursor INTO @NotifID;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    UPDATE Notification
+    SET IsRead = 1
+    WHERE NotifID = @NotifID;
+
+    FETCH NEXT FROM ReadNotificationsCursor INTO @NotifID;
+END;
+
+CLOSE ReadNotificationsCursor;
+DEALLOCATE ReadNotificationsCursor;
+
+
+
+
+-- Cursor2: Prints students with low attendance
+
+
+DECLARE LowAttendanceCursor CURSOR
+FOR
+SELECT StudentID, Attendance
+FROM StudentCourse
+WHERE Attendance < 60;
+
+DECLARE @StdID INT, @Attendance INT;
+
+OPEN LowAttendanceCursor;
+FETCH NEXT FROM LowAttendanceCursor INTO @StdID, @Attendance;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    PRINT CONCAT('StudentID: ', @StdID, ' - Attendance: ', @Attendance, '%');
+
+    FETCH NEXT FROM LowAttendanceCursor INTO @StdID, @Attendance;
+END;
+
+CLOSE LowAttendanceCursor;
+DEALLOCATE LowAttendanceCursor;
+
+
+
+
+
+
+
+
