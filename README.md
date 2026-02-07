@@ -24,7 +24,7 @@ All operations are implemented using **advanced SQL Server techniques** to ensur
 
 ---
 
-## ⚙️ Advanced SQL Server Features Used
+##  Advanced SQL Server Features Used
 - Stored Procedures for centralized business logic
 - TRY / CATCH error handling
 - THROW for structured exception handling
